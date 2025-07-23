@@ -4,6 +4,8 @@ const { v4: uuidv4 } = require('uuid');
 
 async function handleAuth(req, res) {
   console.log('=== HANDLE AUTH STARTED ===');
+  console.log('Request headers:', req.headers);
+  console.log('Request method:', req.method);
   
   try {
     console.log('Auth request received');
@@ -44,19 +46,28 @@ async function handleAuth(req, res) {
     // Load WhatsApp module only when needed
     if (!createWhatsAppConnection) {
       console.log('Loading WhatsApp module...');
-      createWhatsAppConnection = require('./whatsapp').createWhatsAppConnection;
+      try {
+        createWhatsAppConnection = require('./whatsapp').createWhatsAppConnection;
+        console.log('✓ WhatsApp module loaded successfully');
+      } catch (error) {
+        console.error('✗ Failed to load WhatsApp module:', error);
+        throw error;
+      }
     }
     
     // Send immediate response
+    console.log('Sending immediate response...');
     res.json({
       success: true,
       status: 'connecting',
       message: 'Starting WhatsApp connection...'
     });
+    console.log('✓ Response sent successfully');
     
     // Start connection in background
     console.log('Starting background connection...');
     setImmediate(() => {
+      console.log('Background connection process started');
       createWhatsAppConnection(merchantId).catch(error => {
         console.error('Background connection error:', error);
         // Clean up on error
