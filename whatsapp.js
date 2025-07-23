@@ -25,11 +25,8 @@ async function createWhatsAppConnection(merchantId) {
     
     const socket = makeWASocket({
       auth: state,
-      printQRInTerminal: false,
-      logger: {
-        level: 'error',
-        print: () => {}
-      }
+      printQRInTerminal: false
+      // Remove logger to use default Baileys logger
     });
 
     // Handle QR code generation
