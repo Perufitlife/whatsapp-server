@@ -46,6 +46,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Simple test endpoint
+app.get('/test', (req, res) => {
+  console.log('Test endpoint called');
+  res.json({ 
+    message: 'Server is working!',
+    timestamp: new Date().toISOString(),
+    nodeVersion: process.version
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   console.log('Health check requested');
@@ -60,19 +70,30 @@ app.get('/health', (req, res) => {
 console.log('Setting up WhatsApp endpoints...');
 // WhatsApp endpoints with error handling
 app.post('/auth/start', async (req, res) => {
+  console.log('=== AUTH START REQUEST RECEIVED ===');
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  
   try {
-    console.log('=== AUTH START REQUEST RECEIVED ===');
-    console.log('Headers:', req.headers);
-    console.log('Body:', req.body);
-    console.log('Method:', req.method);
-    console.log('URL:', req.url);
-    
+    console.log('Calling handleAuth...');
     await handleAuth(req, res);
-    console.log('✓ AUTH START REQUEST COMPLETED');
+    console.log('✓ AUTH START REQUEST COMPLETED SUCCESSFULLY');
   } catch (error) {
-    console.error('✗ Error in auth start:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Auth failed', details: error.message });
+    console.error('✗ CRITICAL ERROR in auth start:', error);
+    console.error('Error stack:', error.stack);
+    
+    try {
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          error: 'Auth failed', 
+          details: error.message,
+          stack: error.stack 
+        });
+      }
+    } catch (responseError) {
+      console.error('Error sending error response:', responseError);
     }
   }
 });
