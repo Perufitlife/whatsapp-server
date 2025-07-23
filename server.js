@@ -41,7 +41,8 @@ app.use((err, req, res, next) => {
 
 // Add request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} from ${req.ip}`);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
   next();
 });
 
@@ -60,10 +61,16 @@ console.log('Setting up WhatsApp endpoints...');
 // WhatsApp endpoints with error handling
 app.post('/auth/start', async (req, res) => {
   try {
-    console.log('AUTH START REQUEST');
+    console.log('=== AUTH START REQUEST RECEIVED ===');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('Method:', req.method);
+    console.log('URL:', req.url);
+    
     await handleAuth(req, res);
+    console.log('✓ AUTH START REQUEST COMPLETED');
   } catch (error) {
-    console.error('Error in auth start:', error);
+    console.error('✗ Error in auth start:', error);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Auth failed', details: error.message });
     }
