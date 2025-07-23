@@ -25,7 +25,11 @@ async function createWhatsAppConnection(merchantId) {
     
     const socket = makeWASocket({
       auth: state,
-      printQRInTerminal: false
+      printQRInTerminal: false,
+      // Configuración para mejor persistencia
+      keepAliveIntervalMs: 60000, // 1 minuto
+      connectTimeoutMs: 60000, // 1 minuto timeout
+      defaultQueryTimeoutMs: 60000,
       // Remove logger to use default Baileys logger
     });
 
@@ -33,8 +37,14 @@ async function createWhatsAppConnection(merchantId) {
     socket.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
       
+      console.log(`🔄 Connection update for ${merchantId}:`, {
+        connection,
+        hasQr: !!qr,
+        lastDisconnect: lastDisconnect?.error?.output?.statusCode || 'none'
+      });
+      
       if (qr) {
-        console.log(`QR Code generated for ${merchantId}`);
+        console.log(`📱 QR Code generated for ${merchantId}`);
         try {
           const qrCodeUrl = await QRCode.toDataURL(qr);
           global.qrCodes.set(merchantId, qrCodeUrl);
@@ -48,17 +58,24 @@ async function createWhatsAppConnection(merchantId) {
       
       if (connection === 'close') {
         const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-        console.log('Connection closed due to:', lastDisconnect?.error, ', reconnecting:', shouldReconnect);
+        console.log(`❌ Connection CLOSED for ${merchantId}:`);
+        console.log('- Disconnect reason:', lastDisconnect?.error?.output?.statusCode);
+        console.log('- Should reconnect:', shouldReconnect);
+        console.log('- Error details:', lastDisconnect?.error);
         
         if (shouldReconnect) {
+          console.log(`🔄 Attempting reconnection for ${merchantId} in 3 seconds...`);
           setTimeout(() => createWhatsAppConnection(merchantId), 3000);
         } else {
+          console.log(`🚫 Permanently disconnected ${merchantId} - logged out`);
           global.connections.delete(merchantId);
           global.qrCodes.delete(merchantId);
           await notifySupabase(merchantId, 'disconnected');
         }
       } else if (connection === 'open') {
-        console.log(`WhatsApp connected successfully for ${merchantId}`);
+        console.log(`✅ WhatsApp CONNECTED successfully for ${merchantId}`);
+        console.log('- User ID:', socket.user?.id);
+        console.log('- User name:', socket.user?.name);
         
         const connectionInfo = {
           socket,
@@ -70,6 +87,11 @@ async function createWhatsAppConnection(merchantId) {
         
         global.connections.set(merchantId, connectionInfo);
         global.qrCodes.delete(merchantId);
+        
+        console.log(`💾 Saved connection info for ${merchantId}:`, {
+          phone: connectionInfo.phone,
+          pushName: connectionInfo.pushName
+        });
         
         // Notify Supabase about successful connection
         await notifySupabase(merchantId, 'connected', {
