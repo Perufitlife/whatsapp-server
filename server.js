@@ -34,7 +34,9 @@ app.use(express.json());
 // Add error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error', details: err.message });
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
 });
 
 // Add request logging
@@ -114,10 +116,12 @@ global.qrCodes = new Map();
 // Add error handling for uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
+  // Don't exit the process, just log the error
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit the process, just log the error
 });
 
 const server = app.listen(PORT, () => {
