@@ -1,8 +1,12 @@
+console.log('=== LOADING WHATSAPP MODULE DEPENDENCIES ===');
+
 const { default: makeWASocket, DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
+
+console.log('✓ All dependencies loaded successfully');
 
 // Create sessions directory if it doesn't exist
 const sessionsDir = path.join(__dirname, 'sessions');
@@ -11,6 +15,8 @@ if (!fs.existsSync(sessionsDir)) {
 }
 
 async function createWhatsAppConnection(merchantId) {
+  console.log(`=== CREATE WHATSAPP CONNECTION for ${merchantId} ===`);
+  
   try {
     console.log(`Creating WhatsApp connection for merchant: ${merchantId}`);
     
