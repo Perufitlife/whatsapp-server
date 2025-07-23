@@ -8,32 +8,36 @@ async function handleAuth(req, res) {
   console.log('Request method:', req.method);
   
   try {
-    console.log('Auth request received');
+    console.log('✓ Step 1: Auth request received');
     console.log('Request body:', req.body);
     
     const { merchantId } = req.body;
+    console.log('✓ Step 2: Extracted merchantId:', merchantId);
     
     if (!merchantId) {
-      console.log('Missing merchant ID');
+      console.log('❌ Missing merchant ID');
       return res.status(400).json({ error: 'Merchant ID is required' });
     }
     
-    console.log(`Starting auth for merchant: ${merchantId}`);
+    console.log(`✓ Step 3: Starting auth for merchant: ${merchantId}`);
     
     // Initialize globals if they don't exist
     if (!global.connections) {
       global.connections = new Map();
-      console.log('Initialized global.connections');
+      console.log('✓ Step 4: Initialized global.connections');
     }
     if (!global.qrCodes) {
       global.qrCodes = new Map();
-      console.log('Initialized global.qrCodes');
+      console.log('✓ Step 5: Initialized global.qrCodes');
     }
     
     // Check if already connected
+    console.log('✓ Step 6: Checking existing connection...');
     const existingConnection = global.connections.get(merchantId);
+    console.log('✓ Step 7: Existing connection:', existingConnection ? 'found' : 'not found');
+    
     if (existingConnection && existingConnection.status === 'connected') {
-      console.log('Already connected');
+      console.log('✓ Step 8: Already connected, returning existing connection');
       return res.json({
         success: true,
         status: 'already_connected',
@@ -43,7 +47,7 @@ async function handleAuth(req, res) {
       });
     }
     
-    console.log('Sending immediate response and starting WhatsApp connection...');
+    console.log('✓ Step 9: Sending immediate response and starting WhatsApp connection...');
     
     // Send immediate success response
     res.json({
@@ -52,14 +56,16 @@ async function handleAuth(req, res) {
       message: 'WhatsApp connection started - scan QR code to complete'
     });
     
-    console.log('✓ Response sent successfully, now starting WhatsApp connection...');
+    console.log('✓ Step 10: Response sent successfully, now starting WhatsApp connection...');
     
     // Start the actual WhatsApp connection in background
     try {
+      console.log('✓ Step 11: Calling createWhatsAppConnection...');
       await createWhatsAppConnection(merchantId);
-      console.log('✓ WhatsApp connection process started successfully');
+      console.log('✓ Step 12: WhatsApp connection process started successfully');
     } catch (connectionError) {
-      console.error('Error starting WhatsApp connection:', connectionError);
+      console.error('❌ Step 12 ERROR: Error starting WhatsApp connection:', connectionError);
+      console.error('❌ Connection error stack:', connectionError.stack);
       // Don't throw here since we already sent response
       // The connection will be retried or user can try again
     }
