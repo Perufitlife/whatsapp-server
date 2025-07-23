@@ -50,14 +50,23 @@ async function handleAuth(req, res) {
     // Send immediate response
     res.json({
       success: true,
-      status: 'initializing',
+      status: 'connecting',
       message: 'Starting WhatsApp connection...'
     });
     
     // Start connection in background
     console.log('Starting background connection...');
-    createWhatsAppConnection(merchantId).catch(error => {
-      console.error('Background connection error:', error);
+    setImmediate(() => {
+      createWhatsAppConnection(merchantId).catch(error => {
+        console.error('Background connection error:', error);
+        // Clean up on error
+        if (global.connections) {
+          global.connections.delete(merchantId);
+        }
+        if (global.qrCodes) {
+          global.qrCodes.delete(merchantId);
+        }
+      });
     });
     
   } catch (error) {
