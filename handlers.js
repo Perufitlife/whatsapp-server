@@ -1,5 +1,5 @@
-// Load WhatsApp connection only when needed to avoid startup issues
-let createWhatsAppConnection;
+// Load WhatsApp connection function
+const { createWhatsAppConnection } = require('./whatsapp');
 const { v4: uuidv4 } = require('uuid');
 
 async function handleAuth(req, res) {
@@ -23,9 +23,11 @@ async function handleAuth(req, res) {
     // Initialize globals if they don't exist
     if (!global.connections) {
       global.connections = new Map();
+      console.log('Initialized global.connections');
     }
     if (!global.qrCodes) {
       global.qrCodes = new Map();
+      console.log('Initialized global.qrCodes');
     }
     
     // Check if already connected
@@ -41,44 +43,26 @@ async function handleAuth(req, res) {
       });
     }
     
-    console.log('Creating new connection...');
+    console.log('Sending immediate response and starting WhatsApp connection...');
     
-    // Load WhatsApp module only when needed
-    if (!createWhatsAppConnection) {
-      console.log('Loading WhatsApp module...');
-      try {
-        createWhatsAppConnection = require('./whatsapp').createWhatsAppConnection;
-        console.log('✓ WhatsApp module loaded successfully');
-      } catch (error) {
-        console.error('✗ Failed to load WhatsApp module:', error);
-        throw error;
-      }
-    }
-    
-    // Send immediate response
-    console.log('Sending immediate response...');
+    // Send immediate success response
     res.json({
       success: true,
       status: 'connecting',
-      message: 'Starting WhatsApp connection...'
+      message: 'WhatsApp connection started - scan QR code to complete'
     });
-    console.log('✓ Response sent successfully');
     
-    // Start connection in background
-    console.log('Starting background connection...');
-    setImmediate(() => {
-      console.log('Background connection process started');
-      createWhatsAppConnection(merchantId).catch(error => {
-        console.error('Background connection error:', error);
-        // Clean up on error
-        if (global.connections) {
-          global.connections.delete(merchantId);
-        }
-        if (global.qrCodes) {
-          global.qrCodes.delete(merchantId);
-        }
-      });
-    });
+    console.log('✓ Response sent successfully, now starting WhatsApp connection...');
+    
+    // Start the actual WhatsApp connection in background
+    try {
+      await createWhatsAppConnection(merchantId);
+      console.log('✓ WhatsApp connection process started successfully');
+    } catch (connectionError) {
+      console.error('Error starting WhatsApp connection:', connectionError);
+      // Don't throw here since we already sent response
+      // The connection will be retried or user can try again
+    }
     
   } catch (error) {
     console.error('Auth error:', error);
@@ -102,23 +86,38 @@ async function handleDisconnect(req, res) {
     
     console.log(`Disconnecting WhatsApp for merchant: ${merchantId}`);
     
-    const connection = global.connections.get(merchantId);
+    const connection = global.connections?.get(merchantId);
     
     if (connection && connection.socket) {
-      await connection.socket.logout();
-      connection.socket.end();
+      try {
+        await connection.socket.logout();
+        connection.socket.end();
+      } catch (socketError) {
+        console.error('Error closing socket:', socketError);
+        // Continue with cleanup even if socket close fails
+      }
     }
     
-    // Clean up
-    global.connections.delete(merchantId);
-    global.qrCodes.delete(merchantId);
+    // Clean up global state
+    if (global.connections) {
+      global.connections.delete(merchantId);
+    }
+    if (global.qrCodes) {
+      global.qrCodes.delete(merchantId);
+    }
     
     // Clean up session files
-    const sessionPath = require('path').join(__dirname, 'sessions', merchantId);
-    const fs = require('fs');
-    
-    if (fs.existsSync(sessionPath)) {
-      fs.rmSync(sessionPath, { recursive: true, force: true });
+    try {
+      const sessionPath = require('path').join(__dirname, 'sessions', merchantId);
+      const fs = require('fs');
+      
+      if (fs.existsSync(sessionPath)) {
+        fs.rmSync(sessionPath, { recursive: true, force: true });
+        console.log(`Session files cleaned for ${merchantId}`);
+      }
+    } catch (fsError) {
+      console.error('Error cleaning session files:', fsError);
+      // Don't fail the disconnect if file cleanup fails
     }
     
     res.json({
@@ -137,7 +136,7 @@ async function handleDisconnect(req, res) {
 
 async function handleMessage(req, res) {
   try {
-    // Load sendMessage only when needed
+    // Load sendMessage function
     const { sendMessage } = require('./whatsapp');
     
     const { merchantId, to, message, messageId } = req.body;
@@ -155,6 +154,15 @@ async function handleMessage(req, res) {
     }
     
     console.log(`Sending message from ${merchantId} to ${formattedTo}`);
+    
+    // Check if WhatsApp is connected for this merchant
+    const connection = global.connections?.get(merchantId);
+    if (!connection || connection.status !== 'connected') {
+      return res.status(400).json({
+        error: 'WhatsApp not connected for this merchant',
+        status: connection?.status || 'disconnected'
+      });
+    }
     
     const result = await sendMessage(merchantId, formattedTo, message);
     
