@@ -34,8 +34,13 @@ app.use(express.json());
 // Add error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
+  console.error('Error stack:', err.stack);
   if (!res.headersSent) {
-    res.status(500).json({ error: 'Internal server error', details: err.message });
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -122,19 +127,38 @@ app.post('/send-message', async (req, res) => {
   }
 });
 app.get('/status/:merchantId', (req, res) => {
-  const { merchantId } = req.params;
-  const connection = global.connections?.get(merchantId);
-  
-  if (!connection) {
-    return res.json({ connected: false, status: 'disconnected' });
+  try {
+    const { merchantId } = req.params;
+    console.log(`Status check for merchant: ${merchantId}`);
+    
+    const connection = global.connections?.get(merchantId);
+    const qrCode = global.qrCodes?.get(merchantId);
+    
+    if (!connection) {
+      return res.json({ 
+        connected: false, 
+        status: 'disconnected',
+        qrCode: qrCode || null,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    res.json({
+      connected: connection.status === 'connected',
+      status: connection.status || 'connecting',
+      phone: connection.phone || null,
+      pushName: connection.pushName || null,
+      qrCode: qrCode || null,
+      connectedAt: connection.connectedAt || null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error in status endpoint:', error);
+    res.status(500).json({
+      error: 'Failed to get status',
+      details: error.message
+    });
   }
-  
-  res.json({
-    connected: true,
-    status: connection.status || 'connected',
-    phone: connection.phone || null,
-    pushName: connection.pushName || null
-  });
 });
 
 // Initialize global connections map
