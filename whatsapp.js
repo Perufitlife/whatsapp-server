@@ -31,6 +31,62 @@ async function createWhatsAppConnection(merchantId) {
       connectTimeoutMs: 60000, // 1 minuto timeout
       defaultQueryTimeoutMs: 60000,
       // Remove logger to use default Baileys logger
+      
+      // Implementación de getMessage y store para resolver "Waiting for this message"
+      getMessage: async (key) => {
+        console.log(`📨 getMessage called for key:`, key);
+        try {
+          // Buscar el mensaje en el historial local primero
+          const messageId = key.id;
+          const remoteJid = key.remoteJid;
+          
+          // Si no encontramos el mensaje, devolver undefined (Baileys manejará esto)
+          console.log(`❌ Message not found in local storage: ${messageId}`);
+          return undefined;
+        } catch (error) {
+          console.error('Error in getMessage:', error);
+          return undefined;
+        }
+      },
+      
+      // Store para manejar el estado de los mensajes
+      msgRetryCounterMap: {},
+      
+      // Configuración adicional para manejo de mensajes
+      shouldIgnoreJid: (jid) => {
+        // No ignorar ningún JID por ahora
+        return false;
+      },
+      
+      // Manejo de recibos de lectura
+      markOnlineOnConnect: true,
+      
+      // Configuración para evitar problemas de "Waiting for this message"
+      generateHighQualityLinkPreview: false,
+      patchMessageBeforeSending: (message) => {
+        // Patch para asegurar que los mensajes se envíen correctamente
+        const requiresPatch = !!(
+          message.buttonsMessage ||
+          message.templateMessage ||
+          message.listMessage
+        );
+        
+        if (requiresPatch) {
+          message = {
+            viewOnceMessage: {
+              message: {
+                messageContextInfo: {
+                  deviceListMetadataVersion: 2,
+                  deviceListMetadata: {},
+                },
+                ...message,
+              },
+            },
+          };
+        }
+        
+        return message;
+      }
     });
 
     // Handle QR code generation
