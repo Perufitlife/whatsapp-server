@@ -49,6 +49,13 @@ async function handleAuth(req, res) {
     
     console.log('✓ Step 9: Sending immediate response and starting WhatsApp connection...');
     
+    // Initialize connection status
+    global.connections.set(merchantId, {
+      socket: null,
+      status: 'connecting',
+      connectedAt: null
+    });
+    
     // Send immediate success response
     res.json({
       success: true,
@@ -58,16 +65,33 @@ async function handleAuth(req, res) {
     
     console.log('✓ Step 10: Response sent successfully, now starting WhatsApp connection...');
     
+    // Update database to connecting status
+    const { updateDatabaseStatus } = require('./whatsapp');
+    await updateDatabaseStatus(merchantId, 'connecting');
+    
     // Start the actual WhatsApp connection in background
     try {
       console.log('✓ Step 11: Calling createWhatsAppConnection...');
-      await createWhatsAppConnection(merchantId);
+      const socket = await createWhatsAppConnection(merchantId);
       console.log('✓ Step 12: WhatsApp connection process started successfully');
+      
+      // Update the connection with the socket
+      global.connections.set(merchantId, {
+        socket,
+        status: 'connecting',
+        connectedAt: null
+      });
     } catch (connectionError) {
       console.error('❌ Step 12 ERROR: Error starting WhatsApp connection:', connectionError);
       console.error('❌ Connection error stack:', connectionError.stack);
-      // Don't throw here since we already sent response
-      // The connection will be retried or user can try again
+      
+      // Update status to failed
+      global.connections.set(merchantId, {
+        socket: null,
+        status: 'failed',
+        error: connectionError.message
+      });
+      await updateDatabaseStatus(merchantId, 'failed', { error: connectionError.message });
     }
     
   } catch (error) {
