@@ -123,224 +123,42 @@ async function createWhatsAppConnection(merchantId) {
       auth: state,
       printQRInTerminal: false,
       
-      // PHASE 3: CRITICAL - Mobile-specific socket configurations
-      keepAliveIntervalMs: 20000, // 20 seconds - aggressive for mobile stability
-      connectTimeoutMs: 180000, // 3 minutes - extended for poor mobile networks
-      defaultQueryTimeoutMs: 150000, // 2.5 minutes for mobile queries
-      qrTimeout: 90000, // 1.5 minutes QR timeout for mobile scanning
+      // Basic configuration for reliable QR generation
+      browser: ['WhatsApp Business', 'Desktop', '2.2.24'],
+      syncFullHistory: false,
+      markOnlineOnConnect: true,
       
-      // PHASE 3: CRITICAL - Adaptive retry configuration for mobile
-      retryRequestDelayMs: 300, // Slightly higher for mobile processing
-      maxMsgRetryCount: 8, // More retries for unreliable mobile networks
-      emitOwnEvents: false, // Reduce event processing load
-      
-      // PHASE 3: CRITICAL - Enhanced session persistence for multi-device
-      syncFullHistory: false, // Never sync full history on mobile
-      markOnlineOnConnect: true, // Always mark online for mobile
-      msgRetryCounterCache: new Map(), // Dedicated retry cache
-      transactionOpts: {
-        maxCommitRetries: 10,
-        delayBetweenTriesMs: 1000
-      },
-      
-      // PHASE 3: CRITICAL - Mobile-optimized browser configuration
-      browser: ['COD WhatsApp Business', 'Mobile', '4.1.0'],
-      version: [2, 2413, 1], // Latest stable version for mobile
-      
-      // PHASE 3: CRITICAL - Mobile network optimizations
-      waWebSocketUrl: 'wss://web.whatsapp.com/ws/chat',
-      connectTimeoutMs: 180000,
-      queryTimeoutMs: 150000,
-      alwaysUseTakeOver: false, // Reduce conflicts on mobile
-      
-      // CRITICAL: Enhanced logging for debugging
+      // Simplified logging
       logger: {
-        level: 'debug',
+        level: 'info',
         log: (level, ...args) => {
           const timestamp = new Date().toISOString();
           console.log(`[${timestamp}] [${merchantId}] [${level.toUpperCase()}]`, ...args);
         }
       },
       
-      // PHASE 2: CRITICAL - Enhanced getMessage implementation with improved LID handling
+      // Simplified getMessage implementation
       getMessage: async (key) => {
-        const startTime = Date.now();
-        console.log(`📨 [${merchantId}] PHASE2: getMessage called for key:`, {
-          id: key.id,
-          remoteJid: key.remoteJid,
-          fromMe: key.fromMe,
-          participant: key.participant,
-          isLid: key.id && key.id.includes('LID')
-        });
-        
         try {
           const store = global.messageStores.get(merchantId);
           if (!store) {
-            console.log(`❌ [${merchantId}] PHASE2: No message store found`);
+            console.log(`❌ [${merchantId}] No message store found`);
             return undefined;
           }
           
-          // PHASE 2: STEP 1 - Enhanced LID message handling
-          const isLidMessage = key.id && key.id.includes('LID');
-          if (isLidMessage) {
-            console.log(`🔗 [${merchantId}] PHASE2: LID message detected: ${key.id}`);
-            
-            // For LID messages, try multiple resolution strategies
-            const lidMessage = store.getMessage(key);
-            if (lidMessage) {
-              const duration = Date.now() - startTime;
-              console.log(`✅ [${merchantId}] PHASE2: LID message found in store in ${duration}ms`);
-              return lidMessage;
-            }
-            
-            // Try to find by partial LID match
-            const lidBase = key.id.split('_')[0]; // Get LID prefix
-            for (const [storedId, storedMessage] of store.messages) {
-              if (storedId.includes(lidBase)) {
-                const duration = Date.now() - startTime;
-                console.log(`✅ [${merchantId}] PHASE2: LID message found by partial match in ${duration}ms`);
-                return storedMessage;
-              }
-            }
-            
-            console.log(`⚠️ [${merchantId}] PHASE2: LID message ${key.id} not found, allowing Baileys to handle`);
-          }
-          
-          // PHASE 2: STEP 2 - Standard message retrieval
           const message = store.getMessage(key);
           if (message) {
-            const duration = Date.now() - startTime;
-            console.log(`✅ [${merchantId}] PHASE2: Standard message retrieved from store in ${duration}ms:`, {
-              messageId: key.id,
-              hasContent: !!message.message,
-              messageType: Object.keys(message.message || {})[0],
-              isFromMe: key.fromMe
-            });
+            console.log(`✅ [${merchantId}] Message retrieved from store: ${key.id}`);
             return message;
           }
           
-          // PHASE 2: STEP 3 - Recent message retry with exponential backoff
-          const messageAge = Date.now() - (key.messageTimestamp || 0) * 1000;
-          if (messageAge < 30000) { // Last 30 seconds
-            console.log(`⏳ [${merchantId}] PHASE2: Recent message (${messageAge}ms old), attempting retry...`);
-            
-            // First retry after 50ms
-            await new Promise(resolve => setTimeout(resolve, 50));
-            const retryMessage1 = store.getMessage(key);
-            if (retryMessage1) {
-              const duration = Date.now() - startTime;
-              console.log(`✅ [${merchantId}] PHASE2: Message found on first retry in ${duration}ms`);
-              return retryMessage1;
-            }
-            
-            // Second retry after 150ms total
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const retryMessage2 = store.getMessage(key);
-            if (retryMessage2) {
-              const duration = Date.now() - startTime;
-              console.log(`✅ [${merchantId}] PHASE2: Message found on second retry in ${duration}ms`);
-              return retryMessage2;
-            }
-          }
-          
-          // PHASE 2: STEP 4 - Final fallback with detailed logging
-          const duration = Date.now() - startTime;
-          console.log(`🔄 [${merchantId}] PHASE2: Message not found after ${duration}ms, details:`, {
-            messageId: key.id,
-            storeSize: store.messages.size,
-            messageAge: messageAge,
-            isLid: isLidMessage,
-            fromMe: key.fromMe
-          });
-          
+          console.log(`⚠️ [${merchantId}] Message not found in store: ${key.id}`);
           return undefined;
           
         } catch (error) {
-          const duration = Date.now() - startTime;
-          console.error(`❌ [${merchantId}] PHASE2: Error in getMessage after ${duration}ms:`, error);
+          console.error(`❌ [${merchantId}] Error in getMessage:`, error);
           return undefined;
         }
-      },
-      
-      // CRITICAL: Enhanced message retry and state management
-      msgRetryCounterMap: new Map(), // Use Map for better performance
-      
-      // CRITICAL: JID filtering for mobile optimization
-      shouldIgnoreJid: (jid) => {
-        // Ignore status broadcasts and large groups for mobile performance
-        if (jid?.includes('status@broadcast')) return true;
-        if (jid?.includes('@g.us') && jid.split('-').length > 3) return true; // Large groups
-        return false;
-      },
-      
-      // CRITICAL: Mobile-specific message handling
-      generateHighQualityLinkPreview: false, // Faster message sending
-      linkPreviewImageThumbnailWidth: 192, // Smaller thumbnails for mobile
-      
-      // PHASE 2: CRITICAL - Fixed patchMessageBeforeSending - ONLY for interactive messages
-      patchMessageBeforeSending: (message) => {
-        try {
-          // PHASE 2: CRITICAL FIX - Only patch interactive messages, not simple text
-          const isInteractiveMessage = !!(
-            message.buttonsMessage ||
-            message.templateMessage ||
-            message.listMessage ||
-            message.interactiveMessage ||
-            message.requestPaymentMessage ||
-            message.sendPaymentMessage ||
-            message.liveLocationMessage ||
-            message.stickerMessage ||
-            message.audioMessage ||
-            message.videoMessage ||
-            message.imageMessage ||
-            message.documentMessage
-          );
-          
-          // CRITICAL: Do NOT patch simple text messages - this was causing "Waiting for this message"
-          if (!isInteractiveMessage && message.conversation) {
-            console.log(`📝 [${merchantId}] Simple text message - NO patching applied`);
-            return message;
-          }
-          
-          if (!isInteractiveMessage && message.extendedTextMessage?.text) {
-            console.log(`📝 [${merchantId}] Extended text message - NO patching applied`);
-            return message;
-          }
-          
-          // Only patch interactive/media messages
-          if (isInteractiveMessage) {
-            console.log(`🔧 [${merchantId}] Patching interactive/media message for mobile compatibility`);
-            
-            const deviceContext = {
-              deviceListMetadataVersion: 2,
-              deviceListMetadata: {},
-            };
-            
-            // Apply viewOnceMessage wrapper only for interactive content
-            message = {
-              viewOnceMessage: {
-                message: {
-                  messageContextInfo: deviceContext,
-                  ...message,
-                },
-              },
-            };
-            
-            console.log(`📱 [${merchantId}] Interactive message patch applied`);
-          }
-          
-          return message;
-        } catch (error) {
-          console.error(`❌ [${merchantId}] Error patching message:`, error);
-          return message; // Return original message if patching fails
-        }
-      },
-      
-      // CRITICAL: Enhanced receive message processing for mobile
-      shouldSyncHistoryMessage: (msg) => {
-        // Only sync recent messages to reduce mobile load
-        const messageAge = Date.now() - (msg.messageTimestamp || 0) * 1000;
-        return messageAge < 3600000; // Only sync messages from last hour
       }
     });
 
@@ -644,7 +462,7 @@ async function notifySupabase(merchantId, event, data = {}) {
   }
 }
 
-// CRITICAL: Enhanced sendMessage with rate limiting and delivery confirmation
+// Simplified sendMessage function
 async function sendMessage(merchantId, to, message, options = {}) {
   const startTime = Date.now();
   console.log(`📤 [${merchantId}] Starting message send to ${to}`);
@@ -656,101 +474,43 @@ async function sendMessage(merchantId, to, message, options = {}) {
       throw new Error('WhatsApp not connected for this merchant');
     }
 
-    // PHASE 1: CRITICAL RATE LIMITING - Prevent "Waiting for this message"
+    // Simple rate limiting
     const lastSentKey = `${merchantId}:${to}`;
     const lastSentTime = global.messageSendTimestamps.get(lastSentKey) || 0;
     const timeSinceLastMessage = Date.now() - lastSentTime;
-    const MIN_DELAY_MS = 2000; // 2 seconds minimum between messages to same recipient
+    const MIN_DELAY_MS = 1000; // 1 second minimum between messages
     
     if (timeSinceLastMessage < MIN_DELAY_MS) {
       const waitTime = MIN_DELAY_MS - timeSinceLastMessage;
-      console.log(`⏰ [${merchantId}] Rate limiting: waiting ${waitTime}ms before sending to ${to}`);
+      console.log(`⏰ [${merchantId}] Rate limiting: waiting ${waitTime}ms`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
 
-    // Update timestamp BEFORE sending
     global.messageSendTimestamps.set(lastSentKey, Date.now());
     
-    // PHASE 1: CRITICAL MESSAGE PREPARATION
-    let messagePayload = { text: message };
+    // Simple message payload
+    const messagePayload = { text: message };
     
-    // Only apply patching to interactive messages, not simple text
-    if (options.isInteractive) {
-      console.log(`🔧 [${merchantId}] Applying interactive message patch`);
-      messagePayload = options.interactivePayload || messagePayload;
-    }
+    console.log(`📨 [${merchantId}] Sending message to ${to}`);
     
-    console.log(`📨 [${merchantId}] Sending message to ${to} (delay: ${Date.now() - startTime}ms)`);
-    
-    // CRITICAL: Send message with enhanced error handling
+    // Send message
     const result = await connection.socket.sendMessage(to, messagePayload);
-    const messageId = result.key.id;
     
     console.log(`✅ [${merchantId}] Message sent successfully:`, {
-      messageId,
+      messageId: result.key.id,
       to,
       totalTime: Date.now() - startTime
     });
     
-    // PHASE 1: CRITICAL DELIVERY CONFIRMATION TRACKING
-    global.deliveryConfirmations.set(messageId, {
-      status: 'sent',
-      timestamp: Date.now(),
-      merchantId,
-      to,
-      attempt: 1
-    });
-    
-    // PHASE 1: WAIT FOR DELIVERY CONFIRMATION (with timeout)
-    if (options.waitForDelivery !== false) {
-      console.log(`⏳ [${merchantId}] Waiting for delivery confirmation for ${messageId}`);
-      
-      const deliveryTimeout = new Promise((resolve) => {
-        setTimeout(() => resolve({ confirmed: false, reason: 'timeout' }), 5000);
-      });
-      
-      const deliveryCheck = new Promise((resolve) => {
-        const checkInterval = setInterval(() => {
-          const confirmation = global.deliveryConfirmations.get(messageId);
-          if (confirmation && confirmation.status === 'delivered') {
-            clearInterval(checkInterval);
-            resolve({ confirmed: true, confirmation });
-          }
-        }, 100);
-        
-        // Clear interval after timeout
-        setTimeout(() => clearInterval(checkInterval), 5000);
-      });
-      
-      const deliveryResult = await Promise.race([deliveryTimeout, deliveryCheck]);
-      
-      if (deliveryResult.confirmed) {
-        console.log(`✅ [${merchantId}] Message ${messageId} delivered successfully`);
-      } else {
-        console.warn(`⚠️ [${merchantId}] Message ${messageId} delivery not confirmed: ${deliveryResult.reason}`);
-      }
-    }
-    
     return {
       success: true,
       messageId: result.key.id,
-      timestamp: result.messageTimestamp,
-      deliveryWaitTime: Date.now() - startTime,
-      rateLimit: {
-        applied: timeSinceLastMessage < MIN_DELAY_MS,
-        waitTime: timeSinceLastMessage < MIN_DELAY_MS ? MIN_DELAY_MS - timeSinceLastMessage : 0
-      }
+      timestamp: result.messageTimestamp
     };
     
   } catch (error) {
     const totalTime = Date.now() - startTime;
     console.error(`❌ [${merchantId}] Error sending message after ${totalTime}ms:`, error);
-    
-    // Track failed attempts
-    const errorKey = `${merchantId}:${to}:error`;
-    const errorCount = (global.messageSendTimestamps.get(errorKey) || 0) + 1;
-    global.messageSendTimestamps.set(errorKey, errorCount);
-    
     throw error;
   }
 }
