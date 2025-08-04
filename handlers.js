@@ -145,7 +145,17 @@ async function handleMessage(req, res) {
     // Load sendMessage function
     const { sendMessage } = require('./whatsapp');
     
-    const { merchantId, to, message, messageId } = req.body;
+    const { 
+      merchantId, 
+      to, 
+      message, 
+      messageId, 
+      waitForDelivery, 
+      isInteractive, 
+      template_name, 
+      template_variables,
+      options 
+    } = req.body;
     
     if (!merchantId || !to || !message) {
       return res.status(400).json({
@@ -159,7 +169,14 @@ async function handleMessage(req, res) {
       formattedTo = formattedTo + '@s.whatsapp.net';
     }
     
-    console.log(`Sending message from ${merchantId} to ${formattedTo}`);
+    console.log(`📤 [${merchantId}] Enhanced message send request:`, {
+      to: formattedTo,
+      messageLength: message.length,
+      isInteractive: isInteractive || false,
+      waitForDelivery: waitForDelivery !== false,
+      hasTemplate: !!template_name,
+      priority: options?.priority || 5
+    });
     
     // Check if WhatsApp is connected for this merchant
     const connection = global.connections?.get(merchantId);
@@ -170,7 +187,15 @@ async function handleMessage(req, res) {
       });
     }
     
-    const result = await sendMessage(merchantId, formattedTo, message);
+    // PHASE 1: Call enhanced sendMessage with new options
+    const result = await sendMessage(merchantId, formattedTo, message, {
+      waitForDelivery: waitForDelivery !== false,
+      isInteractive: isInteractive || false,
+      template_name,
+      template_variables,
+      priority: options?.priority || 5,
+      instant_delivery: options?.instant_delivery || false
+    });
     
     res.json({
       success: true,
