@@ -1,7 +1,35 @@
 console.log('=== STARTING WHATSAPP-WEB.JS SERVER ===');
 console.log('Node version:', process.version);
+console.log('Platform:', process.platform);
+console.log('Architecture:', process.arch);
 
 require('dotenv').config();
+
+// Environment diagnostics
+console.log('🔍 Environment diagnostics:');
+console.log('- NODE_ENV:', process.env.NODE_ENV || 'not set');
+console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'configured' : 'missing');
+console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'configured' : 'missing');
+console.log('- PUPPETEER_EXECUTABLE_PATH:', process.env.PUPPETEER_EXECUTABLE_PATH || 'not set');
+
+// Check for Chromium executable
+const fs = require('fs');
+const chromiumPaths = [
+  process.env.PUPPETEER_EXECUTABLE_PATH,
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable'
+];
+
+console.log('🔍 Chromium executable check:');
+for (const path of chromiumPaths) {
+  if (path) {
+    const exists = fs.existsSync(path);
+    console.log(`- ${path}: ${exists ? '✅ found' : '❌ not found'}`);
+    if (exists) break;
+  }
+}
 
 const express = require('express');
 const cors = require('cors');
@@ -13,7 +41,7 @@ const {
 } = require('./whatsapp-web');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 
 // Enhanced global state management
 global.whatsappClients = new Map();
