@@ -1,5 +1,5 @@
 [phases.setup]
-aptPkgs = ['chromium', 'chromium-sandbox']
+aptPkgs = ['chromium']
 
 [phases.install]
 dependsOn = ['setup']
