@@ -1,39 +1,49 @@
 [phases.setup]
 aptPkgs = [
-  'chromium-browser', 
-  'fonts-liberation', 
-  'libasound2t64', 
-  'libatk-bridge2.0-0', 
-  'libdrm2', 
-  'libgtk-3-0', 
-  'libnspr4', 
-  'libnss3', 
-  'libxss1', 
-  'libxtst6', 
-  'xdg-utils',
+  'chromium',
   'ca-certificates',
   'fonts-liberation',
   'libappindicator3-1',
-  'libasound2t64',
+  'libasound2',
   'libatk-bridge2.0-0',
+  'libatk1.0-0',
+  'libatspi2.0-0',
   'libdrm2',
   'libgtk-3-0',
   'libnspr4',
   'libnss3',
+  'libx11-6',
+  'libxcomposite1',
+  'libxcursor1',
+  'libxdamage1',
+  'libxext6',
+  'libxfixes3',
+  'libxi6',
+  'libxrandr2',
+  'libxrender1',
   'libxss1',
   'libxtst6',
-  'xdg-utils'
+  'xdg-utils',
+  'libgbm1',
+  'libu2f-udev'
 ]
 cmds = [
-  'ln -sf /usr/bin/chromium-browser /usr/bin/chromium',
-  'ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome',
-  'ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable',
-  'chmod +x /usr/bin/chromium-browser',
-  'echo "Chromium installation verification:"',
+  'echo "=== Chromium Installation Setup ==="',
+  'apt-get update -y',
+  'apt-get install -y --no-install-recommends chromium',
+  'echo "=== Creating Chromium Symlinks ==="',
+  'ln -sf /usr/bin/chromium /usr/bin/chromium-browser',
+  'ln -sf /usr/bin/chromium /usr/bin/google-chrome',
+  'ln -sf /usr/bin/chromium /usr/bin/google-chrome-stable',
+  'chmod +x /usr/bin/chromium*',
+  'echo "=== Chromium Installation Verification ==="',
   'ls -la /usr/bin/chromium* || echo "No chromium executables found"',
-  'ls -la /usr/bin/google-chrome* || echo "No chrome executables found"',
-  'which chromium-browser || echo "chromium-browser not in PATH"',
-  '/usr/bin/chromium-browser --version || echo "Failed to get chromium version"'
+  'which chromium || echo "chromium not in PATH"',
+  'echo "=== Testing Chromium Functionality ==="',
+  '/usr/bin/chromium --version 2>&1 || echo "Chromium version check failed"',
+  '/usr/bin/chromium --no-sandbox --disable-dev-shm-usage --disable-gpu --headless --remote-debugging-port=9222 --disable-web-security about:blank &',
+  'sleep 2 && pkill -f chromium || echo "Chromium startup test completed"',
+  'echo "=== Chromium Setup Complete ==="'
 ]
 
 [phases.install]
@@ -54,9 +64,9 @@ cmd = 'npm start'
 [variables]
 NODE_ENV = 'production'
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
-PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser'
+PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium'
 SUPABASE_URL = 'https://jbwbiomnsbpmcnjgzrqp.supabase.co'
 SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impid2Jpb21uc2JwbWNuamd6cnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDMwNjUsImV4cCI6MjA2ODgxOTA2NX0.oq60ZEcsO6u1CqVJDqQJ58CiUnFkxMUY8Mn9dTUFQ9I'
 
 [build]
-env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser']
+env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium']
