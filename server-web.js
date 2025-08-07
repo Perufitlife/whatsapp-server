@@ -12,22 +12,24 @@ console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'configured' : 'missin
 console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'configured' : 'missing');
 console.log('- PUPPETEER_EXECUTABLE_PATH:', process.env.PUPPETEER_EXECUTABLE_PATH || 'not set');
 
-// Enhanced Chromium executable verification
+// Comprehensive Chromium diagnostic and functionality testing
 const fs = require('fs');
 const { execSync } = require('child_process');
 
-console.log('🔍 Enhanced Chromium verification:');
+console.log('🔍 Comprehensive Chromium Diagnostics:');
 
 const chromiumPaths = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
-  '/usr/bin/chromium-browser',
   '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
   '/usr/bin/google-chrome-stable',
   '/usr/bin/google-chrome',
   '/snap/bin/chromium'
 ];
 
 let foundExecutable = null;
+let chromiumDetails = [];
+
 for (const path of chromiumPaths) {
   if (path) {
     const exists = fs.existsSync(path);
@@ -39,33 +41,75 @@ for (const path of chromiumPaths) {
         fs.accessSync(path, fs.constants.X_OK);
         console.log(`  └─ ✅ Executable permissions verified`);
         
-        // Try to get version
-        const version = execSync(`${path} --version 2>/dev/null || echo "version check failed"`, { encoding: 'utf8' });
+        // Try to get version with timeout
+        const version = execSync(`timeout 10s ${path} --version 2>&1 || echo "version check failed"`, { 
+          encoding: 'utf8',
+          timeout: 15000
+        });
         console.log(`  └─ Version: ${version.trim()}`);
         
-        if (!foundExecutable) {
-          foundExecutable = path;
-          console.log(`  └─ 🎯 Will use this executable`);
+        // Test basic functionality
+        console.log(`  └─ 🧪 Testing basic functionality...`);
+        try {
+          const testResult = execSync(`timeout 15s ${path} --no-sandbox --disable-dev-shm-usage --disable-gpu --headless --virtual-time-budget=2000 about:blank 2>&1`, { 
+            encoding: 'utf8',
+            timeout: 20000
+          });
+          console.log(`  └─ ✅ Functionality test passed`);
+          
+          if (!foundExecutable) {
+            foundExecutable = path;
+            console.log(`  └─ 🎯 Selected as primary executable`);
+          }
+          
+          chromiumDetails.push({
+            path: path,
+            version: version.trim(),
+            functional: true
+          });
+          
+        } catch (funcError) {
+          console.log(`  └─ ❌ Functionality test failed: ${funcError.message.slice(0, 100)}`);
+          chromiumDetails.push({
+            path: path,
+            version: version.trim(),
+            functional: false,
+            error: funcError.message.slice(0, 200)
+          });
         }
+        
       } catch (error) {
-        console.log(`  └─ ❌ Not executable or failed version check`);
+        console.log(`  └─ ❌ Failed basic checks: ${error.message.slice(0, 100)}`);
       }
     }
   }
 }
 
+// Enhanced diagnostics and fallback handling
 if (!foundExecutable) {
   console.error('💥 CRITICAL: No working Chromium executable found!');
+  console.error('📊 Chromium Analysis:', JSON.stringify(chromiumDetails, null, 2));
+  
   console.error('🔍 Searching for any Chromium installations...');
   try {
-    const searchResult = execSync('find /usr /opt /snap -name "*chromium*" -o -name "*chrome*" 2>/dev/null | head -10', { encoding: 'utf8' });
+    const searchResult = execSync('find /usr /opt /snap -name "*chromium*" -o -name "*chrome*" 2>/dev/null | head -15', { encoding: 'utf8' });
     console.error('Found these Chromium-related files:');
     console.error(searchResult || 'No Chromium files found');
   } catch (e) {
     console.error('Could not search filesystem for Chromium');
   }
+  
+  // System information for debugging
+  try {
+    console.error('🖥️ System information:');
+    console.error('APT packages:', execSync('dpkg -l | grep chromium', { encoding: 'utf8' }).trim());
+  } catch (e) {
+    console.error('Could not get APT package info');
+  }
+  
 } else {
   console.log(`✅ Chromium verification complete - using: ${foundExecutable}`);
+  console.log('📊 Available Chromium installations:', chromiumDetails.map(d => `${d.path} (${d.functional ? 'working' : 'broken'})`).join(', '));
 }
 
 const express = require('express');
