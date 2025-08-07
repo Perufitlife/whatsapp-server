@@ -12,23 +12,60 @@ console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'configured' : 'missin
 console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'configured' : 'missing');
 console.log('- PUPPETEER_EXECUTABLE_PATH:', process.env.PUPPETEER_EXECUTABLE_PATH || 'not set');
 
-// Check for Chromium executable
+// Enhanced Chromium executable verification
 const fs = require('fs');
+const { execSync } = require('child_process');
+
+console.log('🔍 Enhanced Chromium verification:');
+
 const chromiumPaths = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
-  '/usr/bin/chromium',
   '/usr/bin/chromium-browser',
+  '/usr/bin/chromium',
+  '/usr/bin/google-chrome-stable',
   '/usr/bin/google-chrome',
-  '/usr/bin/google-chrome-stable'
+  '/snap/bin/chromium'
 ];
 
-console.log('🔍 Chromium executable check:');
+let foundExecutable = null;
 for (const path of chromiumPaths) {
   if (path) {
     const exists = fs.existsSync(path);
     console.log(`- ${path}: ${exists ? '✅ found' : '❌ not found'}`);
-    if (exists) break;
+    
+    if (exists) {
+      try {
+        // Check if executable
+        fs.accessSync(path, fs.constants.X_OK);
+        console.log(`  └─ ✅ Executable permissions verified`);
+        
+        // Try to get version
+        const version = execSync(`${path} --version 2>/dev/null || echo "version check failed"`, { encoding: 'utf8' });
+        console.log(`  └─ Version: ${version.trim()}`);
+        
+        if (!foundExecutable) {
+          foundExecutable = path;
+          console.log(`  └─ 🎯 Will use this executable`);
+        }
+      } catch (error) {
+        console.log(`  └─ ❌ Not executable or failed version check`);
+      }
+    }
   }
+}
+
+if (!foundExecutable) {
+  console.error('💥 CRITICAL: No working Chromium executable found!');
+  console.error('🔍 Searching for any Chromium installations...');
+  try {
+    const searchResult = execSync('find /usr /opt /snap -name "*chromium*" -o -name "*chrome*" 2>/dev/null | head -10', { encoding: 'utf8' });
+    console.error('Found these Chromium-related files:');
+    console.error(searchResult || 'No Chromium files found');
+  } catch (e) {
+    console.error('Could not search filesystem for Chromium');
+  }
+} else {
+  console.log(`✅ Chromium verification complete - using: ${foundExecutable}`);
 }
 
 const express = require('express');
