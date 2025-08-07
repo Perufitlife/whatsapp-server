@@ -1,5 +1,6 @@
 [phases.setup]
-aptPkgs = ['chromium', 'fonts-liberation', 'libasound2t64', 'libatk-bridge2.0-0', 'libdrm2', 'libgtk-3-0', 'libnspr4', 'libnss3', 'libxss1', 'libxtst6', 'xdg-utils']
+aptPkgs = ['chromium', 'chromium-browser', 'fonts-liberation', 'libasound2t64', 'libatk-bridge2.0-0', 'libdrm2', 'libgtk-3-0', 'libnspr4', 'libnss3', 'libxss1', 'libxtst6', 'xdg-utils']
+cmds = ['ln -sf /usr/bin/chromium /usr/bin/chromium-browser']
 
 [phases.install]
 dependsOn = ['setup']
@@ -13,10 +14,11 @@ cmds = ['npm run build']
 cmd = 'npm start'
 
 [variables]
+NODE_ENV = 'production'
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
 PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium'
 SUPABASE_URL = 'https://jbwbiomnsbpmcnjgzrqp.supabase.co'
 SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impid2Jpb21uc2JwbWNuamd6cnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDMwNjUsImV4cCI6MjA2ODgxOTA2NX0.oq60ZEcsO6u1CqVJDqQJ58CiUnFkxMUY8Mn9dTUFQ9I'
 
 [build]
-env = ['PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium']
+env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium']
