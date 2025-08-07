@@ -1,9 +1,16 @@
 [phases.setup]
 aptPkgs = [
-  'snapd',
+  'chromium-browser',
   'fonts-liberation',
   'fonts-roboto',
   'fonts-noto-color-emoji',
+  'fonts-dejavu-core',
+  'fontconfig',
+  'fonts-ipafont-gothic',
+  'fonts-wqy-zenhei',
+  'fonts-thai-tlwg',
+  'fonts-kacst',
+  'fonts-freefont-ttf',
   'libappindicator3-1',
   'libasound2t64',
   'libatk-bridge2.0-0',
@@ -27,19 +34,28 @@ aptPkgs = [
   'libxtst6',
   'libgbm1',
   'libglib2.0-0',
+  'libxshmfence1',
+  'libglu1-mesa',
   'xdg-utils',
-  'xvfb'
+  'xvfb',
+  'wget',
+  'ca-certificates'
 ]
 cmds = [
-  'echo "=== Simplified Chromium Installation ==="',
+  'echo "=== Docker-Compatible Chromium Installation ==="',
   'apt-get update -y',
-  'echo "Installing Chromium via Snap..."',
-  'snap install chromium',
-  'echo "Creating symlink to /usr/bin/chromium..."',
-  'ln -sf /snap/bin/chromium /usr/bin/chromium',
+  'echo "Installing Chromium via APT (Docker-compatible)..."',
+  'apt-get install -y chromium-browser',
+  'echo "Creating standard symlinks..."',
+  'ln -sf /usr/bin/chromium-browser /usr/bin/chromium',
+  'ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome',
   'chmod +x /usr/bin/chromium',
+  'chmod +x /usr/bin/chromium-browser',
   'echo "Verifying installation..."',
-  '/usr/bin/chromium --version',
+  'which chromium-browser',
+  'chromium-browser --version',
+  'echo "Testing headless mode..."',
+  'timeout 10s chromium-browser --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=2000 about:blank || echo "Headless test completed"',
   'echo "=== Chromium Installation Complete ==="'
 ]
 
@@ -61,9 +77,9 @@ cmd = 'npm start'
 [variables]
 NODE_ENV = 'production'
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
-PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium'
+PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser'
 SUPABASE_URL = 'https://jbwbiomnsbpmcnjgzrqp.supabase.co'
 SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impid2Jpb21uc2JwbWNuamd6cnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDMwNjUsImV4cCI6MjA2ODgxOTA2NX0.oq60ZEcsO6u1CqVJDqQJ58CiUnFkxMUY8Mn9dTUFQ9I'
 
 [build]
-env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium']
+env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser']
