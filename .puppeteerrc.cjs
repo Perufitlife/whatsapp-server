@@ -1,3 +1,4 @@
+
 const {join} = require('path');
 
 /**
@@ -5,7 +6,7 @@ const {join} = require('path');
  */
 module.exports = {
   // Use system Chromium when available (Railway)
-  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
   
   // Skip Chromium download if using system version
   skipDownload: process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD === 'true',
