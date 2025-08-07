@@ -9,7 +9,8 @@
     "build": "echo 'Build completed'",
     "start:baileys": "node server.js",
     "start:test": "node test-server.js",
-    "postinstall": "node -e \"console.log('Puppeteer config:', process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD ? 'Using system Chromium' : 'Downloading Chromium')\""
+    "verify-chromium": "node -e \"const puppeteerConfig = require('./.puppeteerrc.cjs'); console.log('Puppeteer will use:', puppeteerConfig.executablePath);\"",
+    "postinstall": "npm run verify-chromium"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.23.0",
