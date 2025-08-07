@@ -9,15 +9,34 @@ const axios = require('axios');
 
 console.log('✓ All whatsapp-web.js dependencies loaded successfully');
 
-// Environment validation
+// Enhanced environment validation
 function validateEnvironment() {
+  console.log('🔍 Validating environment variables...');
+  
   const required = ['SUPABASE_URL'];
+  const optional = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
+  
   const missing = required.filter(key => !process.env[key]);
   
   if (missing.length > 0) {
     console.error('❌ Missing required environment variables:', missing);
     return false;
   }
+  
+  // Check for at least one auth key
+  const hasAuthKey = optional.some(key => process.env[key]);
+  if (!hasAuthKey) {
+    console.warn('⚠️ No Supabase authentication keys found - database updates may fail');
+  }
+  
+  // Log available environment variables (without exposing secrets)
+  console.log('📊 Environment status:', {
+    SUPABASE_URL: !!process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    PUPPETEER_EXECUTABLE_PATH: process.env.PUPPETEER_EXECUTABLE_PATH || 'not set',
+    NODE_ENV: process.env.NODE_ENV || 'not set'
+  });
   
   console.log('✅ Environment variables validated');
   return true;
@@ -69,25 +88,57 @@ async function createWhatsAppConnection(merchantId) {
     const sessionPath = path.join(sessionsDir, merchantId);
     console.log(`📁 [${merchantId}] Session path: ${sessionPath}`);
     
-    // Create WhatsApp client with LocalAuth
+    // Enhanced Puppeteer configuration for Railway deployment
+    const puppeteerConfig = {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-images',
+        '--disable-javascript',
+        '--disable-default-apps',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding'
+      ]
+    };
+
+    // Try to use system Chromium if available
+    const chromiumPaths = [
+      process.env.PUPPETEER_EXECUTABLE_PATH,
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/google-chrome',
+      '/usr/bin/google-chrome-stable'
+    ];
+    
+    for (const chromiumPath of chromiumPaths) {
+      if (chromiumPath && fs.existsSync(chromiumPath)) {
+        puppeteerConfig.executablePath = chromiumPath;
+        console.log(`✅ [${merchantId}] Using Chromium at: ${chromiumPath}`);
+        break;
+      }
+    }
+    
+    if (!puppeteerConfig.executablePath) {
+      console.warn(`⚠️ [${merchantId}] No Chromium executable found, using Puppeteer default`);
+    }
+
+    // Create WhatsApp client with LocalAuth and enhanced Puppeteer config
     const client = new Client({
       authStrategy: new LocalAuth({
         clientId: merchantId,
         dataPath: sessionPath
       }),
-      puppeteer: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process', // <- this one doesn't work in Windows
-          '--disable-gpu'
-        ]
-      },
+      puppeteer: puppeteerConfig,
       webVersionCache: {
         type: 'remote',
         remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
