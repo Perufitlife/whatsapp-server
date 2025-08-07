@@ -156,7 +156,10 @@ async function createWhatsAppConnection(merchantId) {
       webVersionCache: {
         type: 'remote',
         remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
-      }
+      },
+      restartOnAuthFail: true,
+      takeoverOnConflict: true,
+      takeoverTimeoutMs: 60000
     });
 
     // QR Code event handler
@@ -308,9 +311,33 @@ async function createWhatsAppConnection(merchantId) {
       }
     });
 
-    // Initialize the client
+    // Initialize the client with retry mechanism
     console.log(`🚀 [${merchantId}] Initializing WhatsApp client...`);
-    await client.initialize();
+    
+    let initRetries = 0;
+    const maxRetries = 3;
+    
+    while (initRetries < maxRetries) {
+      try {
+        await client.initialize();
+        console.log(`✅ [${merchantId}] WhatsApp client initialized successfully`);
+        break;
+      } catch (initError) {
+        initRetries++;
+        console.error(`❌ [${merchantId}] Initialization attempt ${initRetries}/${maxRetries} failed:`, initError.message);
+        
+        if (initRetries >= maxRetries) {
+          throw initError;
+        }
+        
+        // Wait before retry
+        console.log(`⏳ [${merchantId}] Waiting 3 seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Clean session before retry
+        forceCleanSession(merchantId);
+      }
+    }
     
     // Add connection timeout protection
     const connectionTimeout = setTimeout(() => {
