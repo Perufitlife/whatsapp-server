@@ -1,6 +1,40 @@
 [phases.setup]
-aptPkgs = ['chromium', 'chromium-browser', 'fonts-liberation', 'libasound2t64', 'libatk-bridge2.0-0', 'libdrm2', 'libgtk-3-0', 'libnspr4', 'libnss3', 'libxss1', 'libxtst6', 'xdg-utils']
-cmds = ['ln -sf /usr/bin/chromium /usr/bin/chromium-browser']
+aptPkgs = [
+  'chromium-browser', 
+  'fonts-liberation', 
+  'libasound2t64', 
+  'libatk-bridge2.0-0', 
+  'libdrm2', 
+  'libgtk-3-0', 
+  'libnspr4', 
+  'libnss3', 
+  'libxss1', 
+  'libxtst6', 
+  'xdg-utils',
+  'ca-certificates',
+  'fonts-liberation',
+  'libappindicator3-1',
+  'libasound2t64',
+  'libatk-bridge2.0-0',
+  'libdrm2',
+  'libgtk-3-0',
+  'libnspr4',
+  'libnss3',
+  'libxss1',
+  'libxtst6',
+  'xdg-utils'
+]
+cmds = [
+  'ln -sf /usr/bin/chromium-browser /usr/bin/chromium',
+  'ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome',
+  'ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable',
+  'chmod +x /usr/bin/chromium-browser',
+  'echo "Chromium installation verification:"',
+  'ls -la /usr/bin/chromium* || echo "No chromium executables found"',
+  'ls -la /usr/bin/google-chrome* || echo "No chrome executables found"',
+  'which chromium-browser || echo "chromium-browser not in PATH"',
+  '/usr/bin/chromium-browser --version || echo "Failed to get chromium version"'
+]
 
 [phases.install]
 dependsOn = ['setup']
@@ -8,7 +42,11 @@ cmds = ['npm install']
 
 [phases.build]
 dependsOn = ['install'] 
-cmds = ['npm run build']
+cmds = [
+  'npm run build',
+  'echo "Build verification - checking Chromium availability:"',
+  'node -e "console.log(\"Chromium paths check:\"); const fs = require(\"fs\"); const paths = [\"/usr/bin/chromium-browser\", \"/usr/bin/chromium\", \"/usr/bin/google-chrome\"]; paths.forEach(p => console.log(p + \":\", fs.existsSync(p) ? \"EXISTS\" : \"MISSING\"));"'
+]
 
 [start]
 cmd = 'npm start'
@@ -16,9 +54,9 @@ cmd = 'npm start'
 [variables]
 NODE_ENV = 'production'
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
-PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium'
+PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser'
 SUPABASE_URL = 'https://jbwbiomnsbpmcnjgzrqp.supabase.co'
 SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impid2Jpb21uc2JwbWNuamd6cnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDMwNjUsImV4cCI6MjA2ODgxOTA2NX0.oq60ZEcsO6u1CqVJDqQJ58CiUnFkxMUY8Mn9dTUFQ9I'
 
 [build]
-env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium']
+env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser']
