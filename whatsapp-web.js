@@ -88,7 +88,7 @@ async function createWhatsAppConnection(merchantId) {
     const sessionPath = path.join(sessionsDir, merchantId);
     console.log(`📁 [${merchantId}] Session path: ${sessionPath}`);
     
-    // Simplified Puppeteer configuration for Railway deployment
+    // Ultra-simplified Puppeteer configuration for Railway deployment
     const puppeteerConfig = {
       headless: true,
       args: [
@@ -96,13 +96,10 @@ async function createWhatsAppConnection(merchantId) {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-extensions'
+        '--no-first-run'
       ],
       defaultViewport: null,
-      ignoreDefaultArgs: ['--disable-extensions'],
-      slowMo: 100
+      ignoreDefaultArgs: false
     };
 
     // Try to use system Chrome/Chromium if available
@@ -294,20 +291,26 @@ async function createWhatsAppConnection(merchantId) {
     
     while (initRetries < maxRetries) {
       try {
+        console.log(`🔄 [${merchantId}] Initialization attempt ${initRetries + 1}/${maxRetries}...`);
         await client.initialize();
         console.log(`✅ [${merchantId}] WhatsApp client initialized successfully`);
         break;
       } catch (initError) {
         initRetries++;
-        console.error(`❌ [${merchantId}] Initialization attempt ${initRetries}/${maxRetries} failed:`, initError.message);
+        console.error(`❌ [${merchantId}] Initialization attempt ${initRetries}/${maxRetries} failed:`, {
+          message: initError.message,
+          stack: initError.stack?.split('\n')[0],
+          type: initError.constructor.name
+        });
         
         if (initRetries >= maxRetries) {
+          console.error(`💀 [${merchantId}] All initialization attempts failed. Giving up.`);
           throw initError;
         }
         
-        // Wait before retry
-        console.log(`⏳ [${merchantId}] Waiting 3 seconds before retry...`);
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Wait longer before retry
+        console.log(`⏳ [${merchantId}] Waiting 5 seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
         
         // Clean session before retry
         forceCleanSession(merchantId);
@@ -388,15 +391,12 @@ async function updateDatabaseStatus(merchantId, status, data = {}) {
       dataKeys: Object.keys(data)
     });
 
+    // Simplified payload to avoid schema issues
     const updatePayload = {
       merchant_id: merchantId,
       status,
       qr_code: data.qr_code || null,
-      phone: data.phone || null,
-      push_name: data.push_name || null,
-      session_data: data.session_data || null,
-      updated_at: new Date().toISOString(),
-      ...data // Include any additional data
+      updated_at: new Date().toISOString()
     };
 
     const response = await axios.post(`${supabaseUrl}/rest/v1/wa_auth_sessions`, updatePayload, {
