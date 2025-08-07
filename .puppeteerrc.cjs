@@ -17,10 +17,10 @@ module.exports = {
       process.env.CHROMIUM_BIN,
       
       // Standard Ubuntu/Debian locations (Railway/Docker compatible)
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium',
       '/usr/bin/google-chrome-stable',
       '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
       
       // Alternative system locations
       '/usr/local/bin/chromium',
@@ -167,10 +167,10 @@ module.exports = {
     // Final fallback strategy
     console.error('🆘 FALLBACK: Using priority fallback list...');
     const fallbackPaths = [
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium',
       '/usr/bin/google-chrome-stable',
-      '/usr/bin/google-chrome'
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium'
     ];
     
     for (const fallback of fallbackPaths) {
@@ -182,7 +182,7 @@ module.exports = {
     }
     
     // Ultimate fallback
-    const ultimateFallback = '/usr/bin/chromium-browser';
+    const ultimateFallback = '/usr/bin/google-chrome-stable';
     console.error(`🚨 ULTIMATE FALLBACK: ${ultimateFallback}`);
     console.error('⚠️  This may not work, but Puppeteer will attempt to proceed');
     return ultimateFallback;

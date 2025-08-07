@@ -1,6 +1,5 @@
 [phases.setup]
 aptPkgs = [
-  'chromium-browser',
   'fonts-liberation',
   'fonts-roboto',
   'fonts-noto-color-emoji',
@@ -39,24 +38,30 @@ aptPkgs = [
   'xdg-utils',
   'xvfb',
   'wget',
-  'ca-certificates'
+  'ca-certificates',
+  'gnupg',
+  'software-properties-common'
 ]
 cmds = [
-  'echo "=== Docker-Compatible Chromium Installation ==="',
+  'echo "=== Docker-Compatible Google Chrome Installation ==="',
   'apt-get update -y',
-  'echo "Installing Chromium via APT (Docker-compatible)..."',
-  'apt-get install -y chromium-browser',
+  'echo "Adding Google Chrome repository..."',
+  'wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -',
+  'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list',
+  'apt-get update -y',
+  'echo "Installing Google Chrome (Docker-compatible)..."',
+  'apt-get install -y google-chrome-stable',
   'echo "Creating standard symlinks..."',
-  'ln -sf /usr/bin/chromium-browser /usr/bin/chromium',
-  'ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome',
-  'chmod +x /usr/bin/chromium',
-  'chmod +x /usr/bin/chromium-browser',
+  'ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome',
+  'ln -sf /usr/bin/google-chrome-stable /usr/bin/chromium',
+  'ln -sf /usr/bin/google-chrome-stable /usr/bin/chromium-browser',
+  'chmod +x /usr/bin/google-chrome-stable',
   'echo "Verifying installation..."',
-  'which chromium-browser',
-  'chromium-browser --version',
+  'which google-chrome-stable',
+  'google-chrome-stable --version',
   'echo "Testing headless mode..."',
-  'timeout 10s chromium-browser --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=2000 about:blank || echo "Headless test completed"',
-  'echo "=== Chromium Installation Complete ==="'
+  'timeout 10s google-chrome-stable --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=2000 about:blank || echo "Headless test completed"',
+  'echo "=== Google Chrome Installation Complete ==="'
 ]
 
 [phases.install]
@@ -77,9 +82,9 @@ cmd = 'npm start'
 [variables]
 NODE_ENV = 'production'
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
-PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser'
+PUPPETEER_EXECUTABLE_PATH = '/usr/bin/google-chrome-stable'
 SUPABASE_URL = 'https://jbwbiomnsbpmcnjgzrqp.supabase.co'
 SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impid2Jpb21uc2JwbWNuamd6cnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDMwNjUsImV4cCI6MjA2ODgxOTA2NX0.oq60ZEcsO6u1CqVJDqQJ58CiUnFkxMUY8Mn9dTUFQ9I'
 
 [build]
-env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser']
+env = ['NODE_ENV=production', 'PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true', 'PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable']

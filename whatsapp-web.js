@@ -111,13 +111,13 @@ async function createWhatsAppConnection(merchantId) {
       ]
     };
 
-    // Try to use system Chromium if available
+    // Try to use system Chrome/Chromium if available
     const chromiumPaths = [
       process.env.PUPPETEER_EXECUTABLE_PATH,
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium',
       '/usr/bin/google-chrome-stable',
-      '/usr/bin/google-chrome'
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium'
     ];
     
     for (const chromiumPath of chromiumPaths) {
