@@ -1,8 +1,16 @@
 [phases.setup]
 aptPkgs = ['chromium', 'chromium-sandbox']
 
-[phases.build]
+[phases.install]
 dependsOn = ['setup']
+cmds = ['npm install']
+
+[phases.build]
+dependsOn = ['install']
+cmds = ['npm run build']
+
+[start]
+cmd = 'npm start'
 
 [variables]
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
