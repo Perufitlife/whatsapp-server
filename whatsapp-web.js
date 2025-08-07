@@ -103,11 +103,25 @@ async function createWhatsAppConnection(merchantId) {
         '--disable-extensions',
         '--disable-plugins',
         '--disable-images',
-        '--disable-javascript',
         '--disable-default-apps',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-ipc-flooding-protection',
+        '--disable-hang-monitor',
+        '--disable-client-side-phishing-detection',
+        '--disable-component-update',
+        '--disable-domain-reliability',
+        '--disable-sync',
+        '--disable-translate',
+        '--hide-scrollbars',
+        '--mute-audio',
+        '--no-default-browser-check',
+        '--no-pings',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor'
       ]
     };
 
@@ -386,6 +400,7 @@ async function updateDatabaseStatus(merchantId, status, data = {}) {
     const response = await axios.post(`${supabaseUrl}/rest/v1/wa_auth_sessions`, updatePayload, {
       headers: {
         'Authorization': `Bearer ${supabaseKey}`,
+        'apikey': supabaseKey,
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       }
@@ -427,6 +442,7 @@ async function notifySupabase(merchantId, event, data = {}) {
     }, {
       headers: {
         'Authorization': `Bearer ${supabaseKey}`,
+        'apikey': supabaseKey,
         'Content-Type': 'application/json'
       }
     });
