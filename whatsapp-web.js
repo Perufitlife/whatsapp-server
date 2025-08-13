@@ -261,27 +261,40 @@ async function createWhatsAppConnection(merchantId) {
     // Message event handler for incoming messages
     client.on('message', async (message) => {
       try {
-        if (!message.fromMe && message.body) {
-          console.log(`📨 [${merchantId}] Incoming message from ${message.from}: ${message.body}`);
-          
+        if (message.body) { // Capturar TODOS los mensajes (enviados y recibidos)
+          console.log(`📨 [${merchantId}] ${message.fromMe ? 'Outgoing' : 'Incoming'} message from ${message.from}: ${message.body}`);
+    
           // Extract clean phone number
           const phoneNumber = message.from.replace('@c.us', '');
           
-          // Notify Supabase asynchronously
-          notifySupabase(merchantId, 'message_received', {
-            messageId: message.id._serialized,
-            from: phoneNumber,
-            text: message.body,
-            timestamp: message.timestamp,
-            type: message.type
-          }).catch(error => {
-            console.error(`❌ [${merchantId}] Error notifying Supabase:`, error);
-          });
+          // Enviar al webhook para guardar en la base de datos
+          try {
+            await axios.post('https://kaeqqunqcrwsefazjets.supabase.co/functions/v1/whatsapp-webhook', {
+              merchantId: merchantId,
+              messageId: message.id._serialized,
+              chatId: message.from,
+              from: message.fromMe ? message.to.replace('@c.us', '') : phoneNumber,
+              to: message.fromMe ? phoneNumber : message.to.replace('@c.us', ''),
+              body: message.body,
+              messageType: message.type || 'text',
+              fromMe: message.fromMe,
+              timestamp: message.timestamp * 1000 // Convertir a milisegundos
+            }, {
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            console.log(`✅ [${merchantId}] Message saved to database: ${message.id._serialized}`);
+          } catch (webhookError) {
+            console.error(`❌ [${merchantId}] Error saving message to database:`, webhookError.message);
+          }
         }
       } catch (error) {
         console.error(`❌ [${merchantId}] Error processing message:`, error);
       }
     });
+
 
     // Initialize the client with retry mechanism
     console.log(`🚀 [${merchantId}] Initializing WhatsApp client...`);
