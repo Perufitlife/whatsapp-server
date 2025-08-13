@@ -428,6 +428,153 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+// === NUEVOS ENDPOINTS PARA OBTENER DATOS REALES ===
+
+// Obtener lista de chats/contactos
+app.get('/chats/:merchantId', async (req, res) => {
+  console.log('=== GET CHATS REQUEST ===');
+  console.log('Request params:', req.params);
+  
+  try {
+    const { merchantId } = req.params;
+    
+    if (!merchantId) {
+      return res.status(400).json({ 
+        error: 'Merchant ID is required',
+        received: req.params
+      });
+    }
+    
+    console.log(`📱 Getting chats for merchant: ${merchantId}`);
+    
+    const connection = global.whatsappClients.get(merchantId);
+    if (!connection || !connection.client) {
+      return res.status(404).json({ 
+        error: 'WhatsApp not connected for this merchant',
+        merchantId: merchantId
+      });
+    }
+    
+    console.log(`📞 [${merchantId}] Fetching chats from WhatsApp Web...`);
+    
+    // Obtener todos los chats
+    const chats = await connection.client.getChats();
+    console.log(`📊 [${merchantId}] Found ${chats.length} chats`);
+    
+    const contactsList = chats
+      .filter(chat => !chat.isGroup) // Solo contactos individuales, no grupos
+      .slice(0, 50) // Limitar a 50 para performance
+      .map(chat => {
+        const phoneNumber = chat.id.user;
+        const formattedPhone = phoneNumber.startsWith('521') 
+          ? `+52 ${phoneNumber.slice(3, 5)} ${phoneNumber.slice(5, 9)} ${phoneNumber.slice(9)}`
+          : `+${phoneNumber}`;
+          
+        return {
+          id: chat.id._serialized,
+          name: chat.name || null,
+          phone: formattedPhone,
+          phoneRaw: phoneNumber,
+          lastMessage: chat.lastMessage?.body || '',
+          lastMessageTime: chat.lastMessage?.timestamp ? chat.lastMessage.timestamp * 1000 : null,
+          unreadCount: chat.unreadCount || 0,
+          isGroup: chat.isGroup || false
+        };
+      })
+      .sort((a, b) => {
+        // Ordenar por último mensaje (más reciente primero)
+        return (b.lastMessageTime || 0) - (a.lastMessageTime || 0);
+      });
+    
+    console.log(`✅ [${merchantId}] Returning ${contactsList.length} contacts`);
+    
+    res.json({
+      success: true,
+      chats: contactsList,
+      total: contactsList.length,
+      merchantId: merchantId
+    });
+    
+  } catch (error) {
+    console.error('💥 Get chats error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get chats', 
+      details: error.message,
+      merchantId: req.params.merchantId
+    });
+  }
+});
+
+// Obtener mensajes de un chat específico
+app.get('/messages/:merchantId/:chatId', async (req, res) => {
+  console.log('=== GET MESSAGES REQUEST ===');
+  console.log('Request params:', req.params);
+  
+  try {
+    const { merchantId, chatId } = req.params;
+    
+    if (!merchantId || !chatId) {
+      return res.status(400).json({ 
+        error: 'Merchant ID and Chat ID are required',
+        received: req.params
+      });
+    }
+    
+    console.log(`💬 Getting messages for merchant: ${merchantId}, chat: ${chatId}`);
+    
+    const connection = global.whatsappClients.get(merchantId);
+    if (!connection || !connection.client) {
+      return res.status(404).json({ 
+        error: 'WhatsApp not connected for this merchant',
+        merchantId: merchantId
+      });
+    }
+    
+    console.log(`📞 [${merchantId}] Fetching messages for chat: ${chatId}`);
+    
+    // Obtener el chat por ID
+    const chat = await connection.client.getChatById(chatId);
+    
+    // Obtener los últimos 50 mensajes
+    const messages = await chat.fetchMessages({ limit: 50 });
+    console.log(`📊 [${merchantId}] Found ${messages.length} messages for chat ${chatId}`);
+    
+    const messagesList = messages
+      .reverse() // WhatsApp devuelve en orden inverso, lo revertimos
+      .map(msg => {
+        return {
+          id: msg.id._serialized,
+          from: msg.from,
+          to: msg.to || chatId,
+          body: msg.body,
+          timestamp: msg.timestamp * 1000, // Convertir a millisegundos
+          fromMe: msg.fromMe,
+          type: msg.type,
+          hasMedia: msg.hasMedia || false
+        };
+      });
+    
+    console.log(`✅ [${merchantId}] Returning ${messagesList.length} messages for chat ${chatId}`);
+    
+    res.json({
+      success: true,
+      messages: messagesList,
+      total: messagesList.length,
+      chatId: chatId,
+      merchantId: merchantId
+    });
+    
+  } catch (error) {
+    console.error('💥 Get messages error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get messages', 
+      details: error.message,
+      merchantId: req.params.merchantId,
+      chatId: req.params.chatId
+    });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`🚀 WhatsApp-Web.js Server running on port ${PORT}`);
